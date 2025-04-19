@@ -35,7 +35,12 @@ RUN apt-get update && apt-get install -y \
     cmake \
     nano \
     vim \
+    keyboard-configuration \
     && rm -rf /var/lib/apt/lists/*
+
+RUN echo 'debconf debconf/frontend select Noninteractive'     | debconf-set-selections \
+    && echo 'keyboard-configuration  keyboard-configuration/layout  select  English (US)' | debconf-set-selections \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration
 
 # 4) Create a non-root user for development
 RUN groupadd --gid $USER_GID $USERNAME \
