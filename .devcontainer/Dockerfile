@@ -58,8 +58,8 @@ RUN git clone -b noetic https://github.com/Interbotix/interbotix_ros_rovers.git 
 
 # 7) Run the XSLocobot install script for Noetic + Create3 base
 RUN chmod +x ros_rovers/interbotix_ros_xslocobots/install/amd64/xslocobot_amd64_install.sh \
- && yes | ros_rovers/interbotix_ros_xslocobots/install/amd64/xslocobot_amd64_install.sh \
-      -d $ROS_DISTRO -b create3
+ && ros_rovers/interbotix_ros_xslocobots/install/amd64/xslocobot_amd64_install.sh \
+      -d $ROS_DISTRO -b create3 -n
 
 # 8) Default entrypoint: source ROS and drop into an interactive bash
 ENTRYPOINT ["/bin/bash", "-c", "source /opt/ros/$ROS_DISTRO/setup.bash && exec bash"]
