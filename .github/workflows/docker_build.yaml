@@ -21,10 +21,10 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.CR_PAT }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
       run: |
-        IMAGE_NAME=ghcr.io/sketchfabriq/locotbot:latest
+        IMAGE_NAME=ghcr.io/sketchfabriq/loco:latest
         docker build -t $IMAGE_NAME . -f .devcontainer/Dockerfile
         docker push $IMAGE_NAME 
