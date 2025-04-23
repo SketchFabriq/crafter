@@ -6,3 +6,4 @@ ENV DEBIAN_FRONTEND=noninteractive \
     USERNAME=vscode \
     USER_UID=1000 \
     USER_GID=1000
+
