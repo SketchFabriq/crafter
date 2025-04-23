@@ -14,5 +14,8 @@ services:
     env_file:
       - .env
     entrypoint: ""
-    command: sleep infinity
+    command : sleep infinity # 
+    # bash -c "source /home/vscode/interbotix_ws/devel/setup.bash && roslaunch interbotix_xslocobot_gazebo xslocobot_gazebo.launch robot_model:=locobot_wx250s show_lidar:=true use_trajectory_controllers:=true"
+    # command: bash -c "source /home/vscode/interbotix_ws/devel/setup.bash &&
+    #            roslaunch interbotix_xslocobot_gazebo xslocobot_gazebo.launch robot_model:=locobot_wx250s show_lidar:=true use_trajectory_controllers:=true"
     privileged: true

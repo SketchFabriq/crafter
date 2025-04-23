@@ -1,70 +1,63 @@
-# Use Ubuntu 20.04 (Focal) for ROS Noetic
 FROM ubuntu:20.04
 
-# avoid any interactive prompts and ensure tput works
+# noninteractive APT
 ENV DEBIAN_FRONTEND=noninteractive \
     ROS_DISTRO=noetic \
     USERNAME=vscode \
     USER_UID=1000 \
-    USER_GID=1000 \
-    TERM=xterm
+    USER_GID=1000
 
-# 1) Install tools to add ROS apt repo and terminfo database
+# Install core tools
 RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg2 \
-    lsb-release \
-    ncurses-term \
-    && rm -rf /var/lib/apt/lists/*
+    curl git lsb-release sudo gnupg2 wget \
+    python3-pip python3-venv build-essential cmake gdb nano vim \
+    software-properties-common \
+  && rm -rf /var/lib/apt/lists/*
 
-# 2) Add the ROS1 (Noetic) package repository
-RUN curl -sSL http://packages.ros.org/ros.key | apt-key add - \
- && sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -cs) main" \
-           > /etc/apt/sources.list.d/ros1-latest.list'
+# Add ROS repository and install Noetic
+RUN echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -cs) main" \
+      > /etc/apt/sources.list.d/ros-latest.list \
+  && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
+      | apt-key add - \
+  && apt-get update && apt-get install -y \
+    ros-noetic-desktop-full \
+    python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool python3-catkin-tools \
+  && rm -rf /var/lib/apt/lists/*
 
-# 3) Install ROS Noetic, Gazebo support, and common dev tools
-RUN apt-get update && apt-get install -y \
-    ros-noetic-ros-base \
-    ros-noetic-gazebo-ros-pkgs \
-    ros-noetic-gazebo-ros-control \
-    sudo \
-    git \
-    python3-pip \
-    python3-venv \
-    build-essential \
-    cmake \
-    nano \
-    vim \
-    keyboard-configuration \
-    && rm -rf /var/lib/apt/lists/*
+# Initialize rosdep
+RUN rosdep init && rosdep update
 
-RUN echo 'debconf debconf/frontend select Noninteractive'     | debconf-set-selections \
-    && echo 'keyboard-configuration  keyboard-configuration/layout  select  English (US)' | debconf-set-selections \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration
-
-# 4) Create a non-root user for development
+# Create non-root user for VS Code
 RUN groupadd --gid $USER_GID $USERNAME \
- && useradd -m --uid $USER_UID --gid $USER_GID -s /bin/bash $USERNAME \
- && usermod -aG sudo $USERNAME \
- && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+  && useradd -m --uid $USER_UID --gid $USER_GID -s /bin/bash $USERNAME \
+  && usermod -aG sudo $USERNAME \
+  && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME
 
+# Stub systemctl so Netplan/service calls no-op
+RUN ln -sf /bin/true /usr/bin/systemctl
+
+# Switch to non-root for workspace setup
+USER $USERNAME
 WORKDIR /home/$USERNAME
+
+# Create Interbotix workspace
+# RUN mkdir -p interbotix_ws/src
+
+# Download & run LoCoBot installer (Noetic + Create3)
+RUN curl -sSL https://raw.githubusercontent.com/Interbotix/interbotix_ros_rovers/main/interbotix_ros_xslocobots/install/amd64/xslocobot_amd64_install.sh -o xslocobot_install.sh \
+    && chmod +x xslocobot_install.sh
+
+ENV TERM=xterm
+RUN ./xslocobot_install.sh -d noetic -b create3 -p ~/interbotix_ws -n
+
+# Auto-source ROS and workspace
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc # \
+    && echo "source /home/$USERNAME/interbotix_ws/devel/setup.bash" >> ~/.bashrc
+
+# Fix permissions
+USER root
 RUN chown -R $USERNAME:$USERNAME /home/$USERNAME
 
-# switch to non-root user
+# Final defaults
 USER $USERNAME
-
-# 5) Ensure ROS & Gazebo are sourced in every new shell
-RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc \
- && echo "source /usr/share/gazebo/setup.sh"  >> ~/.bashrc
-
-# 6) Clone the Interbotix ROS Rovers repo (LoCoBot support)
-RUN git clone -b noetic https://github.com/Interbotix/interbotix_ros_rovers.git ros_rovers
-
-# 7) Run the XSLocobot install script for Noetic + Create3 base
-RUN chmod +x ros_rovers/interbotix_ros_xslocobots/install/amd64/xslocobot_amd64_install.sh \
- && ros_rovers/interbotix_ros_xslocobots/install/amd64/xslocobot_amd64_install.sh \
-      -d $ROS_DISTRO -b create3 -n
-
-# 8) Default entrypoint: source ROS and drop into an interactive bash
-ENTRYPOINT ["/bin/bash", "-c", "source /opt/ros/$ROS_DISTRO/setup.bash && exec bash"]
+WORKDIR /home/$USERNAME/
