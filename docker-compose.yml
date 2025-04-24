@@ -3,7 +3,7 @@ services:
     build:
       context: .devcontainer
       dockerfile: Dockerfile
-    image: ghcr.io/sketchfabriq/locotbot:devcontainer
+    image: ghcr.io/sketchfabriq/loco:devcontainer
     volumes:
       - ./:/home/vscode/ros_ws/
       - /tmp/.X11-unix:/tmp/.X11-unix

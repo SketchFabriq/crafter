@@ -51,7 +51,7 @@ ENV TERM=xterm
 RUN ./xslocobot_install.sh -d noetic -b create3 -p ~/interbotix_ws -n
 
 # Auto-source ROS and workspace
-RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc # \
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc \
     && echo "source /home/$USERNAME/interbotix_ws/devel/setup.bash" >> ~/.bashrc
 
 # Fix permissions
