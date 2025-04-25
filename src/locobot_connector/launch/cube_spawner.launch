@@ -1,0 +1,11 @@
+<launch>
+    <!-- Arguments -->
+    <arg name="num_cubes" default="1" doc="Number of cubes to spawn"/>
+    <arg name="pattern" default="random" doc="Pattern for cube arrangement (random, line, grid, rainbow)"/>
+    
+    <!-- Cube Spawner Node -->
+    <node name="cube_spawner" pkg="locobot_connector" type="cube_spawner.py" output="screen">
+        <param name="num_cubes" value="$(arg num_cubes)"/>
+        <param name="pattern" value="$(arg pattern)"/>
+    </node>
+</launch> 
