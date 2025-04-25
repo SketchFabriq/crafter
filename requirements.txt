@@ -1,0 +1,9 @@
+gymnasium==1.0.0
+panda-gym==3.0.7
+scipy==1.10.1
+moviepy==1.0.3
+numpy==1.24.4
+tensorboard==2.14.0
+scipy==1.10.1
+ipykernel==6.29.5
+ipython==8.12.3

@@ -8,3 +8,15 @@
 ```bash
 roslaunch interbotix_xslocobot_moveit_interface xslocobot_moveit_interface.launch robot_model:=locobot_wx250s show_lidar:=true use_actual:=true use_cpp_interface:=true
 ```
+
+rosrun xacro xacro \
+  $(rospack find interbotix_xslocobot_descriptions)/urdf/locobot.urdf.xacro \
+  robot_model:=locobot_wx250s \
+  arm_model:=mobile_wx250s \
+  base_model:=create3 \
+  robot_name:=locobot \
+  show_lidar:=false \
+  show_gripper_bar:=true \
+  show_gripper_fingers:=true \
+  external_urdf_loc:="" \
+> ~/ros_ws/locobot_full.urdf
