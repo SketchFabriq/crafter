@@ -1,158 +1,155 @@
-import numpy as np
-import rospy
+#!/usr/bin/env python3
 import sys
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from sensor_msgs.msg import JointState
-import time
+import rospy
 import actionlib
+import moveit_commander
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Pose
 
 
 class LocobotArmControl:
-    def __init__(self):
-        # Initialize ROS node
-        rospy.init_node('locobot_arm_control', anonymous=True)
+    def __init__(self,
+                 joint_action_topic: str = '/locobot/arm_controller/follow_joint_trajectory',
+                 gripper_topic: str = '/locobot/gripper_controller/command',
+                 joint_group_names=None,
+                 gripper_joint_names=None,
+                 moveit_ns: str = 'locobot',
+                 moveit_group: str = 'interbotix_arm',
+                 planning_time: float = 5.0):
+        # --- ROS init ---
+        if not rospy.core.is_initialized():
+            rospy.init_node('locobot_arm_control', anonymous=True)
 
+        # --- Joint‐space action client ---
         self._traj_client = actionlib.SimpleActionClient(
-            '/locobot/arm_controller/follow_joint_trajectory',
+            joint_action_topic,
             FollowJointTrajectoryAction
         )
+        rospy.loginfo(f"Waiting for joint trajectory action on {joint_action_topic}…")
         self._traj_client.wait_for_server()
+        rospy.loginfo("Joint‐space action server ready")
 
-        # Create publisher for gripper controller
+        # --- Gripper publisher ---
         self.gripper_pub = rospy.Publisher(
-            '/locobot/gripper_controller/command',
+            gripper_topic,
             JointTrajectory,
             queue_size=10
         )
 
-        # Define joint names (based on your rostopic list output)
-        self.arm_joint_names = ['waist', 'shoulder', 'elbow',
-                                'forearm_roll', 'wrist_angle', 'wrist_rotate']
-        self.gripper_joint_names = ['left_finger', 'right_finger']
+        # --- Joint names ---
+        self.arm_joint_names = joint_group_names or [
+            'waist', 'shoulder', 'elbow',
+            'forearm_roll', 'wrist_angle', 'wrist_rotate'
+        ]
+        self.gripper_joint_names = gripper_joint_names or ['left_finger', 'right_finger']
 
-        # Subscribe to joint states to get current position
+        # --- Joint states subscriber (for feedback) ---
         self.joint_states = None
-        rospy.Subscriber('/locobot/joint_states', JointState,
-                         self.joint_states_callback)
+        rospy.Subscriber('/locobot/joint_states',
+                         JointState,
+                         self._joint_states_cb)
 
-        # Wait for publisher connections
+        # --- MoveIt! setup for IK mode ---
+        moveit_commander.roscpp_initialize(sys.argv)
+        self.robot = moveit_commander.RobotCommander(
+            robot_description=f"/{moveit_ns}/robot_description",
+            ns=moveit_ns
+        )
+        self.scene = moveit_commander.PlanningSceneInterface(ns=moveit_ns)
+        self.group = moveit_commander.MoveGroupCommander(
+            moveit_group,
+            robot_description=f"/{moveit_ns}/robot_description",
+            ns=moveit_ns
+        )
+        self.group.set_planning_time(planning_time)
+        self.group.allow_replanning(True)
+
         rospy.sleep(1.0)
-        print("Locobot arm control initialized")
+        rospy.loginfo("LocobotArmControl initialized")
 
-    def joint_states_callback(self, data):
-        """Store the latest joint states data"""
-        self.joint_states = data
+    def _joint_states_cb(self, msg: JointState):
+        self.joint_states = msg
 
     def get_current_joint_positions(self):
-        """Get current joint positions if available"""
-        if self.joint_states is None:
-            print("Warning: No joint states received yet")
+        if not self.joint_states:
+            rospy.logwarn("No joint states yet")
             return None
+        return {n: p for n, p in zip(self.joint_states.name,
+                                     self.joint_states.position)}
 
-        positions = {}
-        for name, pos in zip(self.joint_states.name, self.joint_states.position):
-            positions[name] = pos
-
-        return positions
-
-    def print_current_positions(self):
-        """Print current joint positions"""
-        positions = self.get_current_joint_positions()
-        if positions:
-            print("\nCurrent Joint Positions:")
-            for joint in self.arm_joint_names:
-                if joint in positions:
-                    print(f"  {joint}: {positions[joint]:.4f}")
-                else:
-                    print(f"  {joint}: unknown")
-
-            for joint in self.gripper_joint_names:
-                if joint in positions:
-                    print(f"  {joint}: {positions[joint]:.4f}")
-                else:
-                    print(f"  {joint}: unknown")
-        else:
-            print("Could not retrieve current joint positions")
-
-    def move_arm(self, positions, duration=2.0):
-        from trajectory_msgs.msg import JointTrajectoryPoint
-
-        # build the JointTrajectory inside a goal
+    def move_arm_joints(self, positions, duration: float = 2.0):
+        """Send a FollowJointTrajectoryGoal to move each arm joint."""
+        if len(positions) != len(self.arm_joint_names):
+            rospy.logwarn(f"Expected {len(self.arm_joint_names)} joints, got {len(positions)}")
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = self.arm_joint_names
+
         point = JointTrajectoryPoint()
         point.positions = positions
         point.time_from_start = rospy.Duration(duration)
         goal.trajectory.points = [point]
 
-        # send and wait
         self._traj_client.send_goal(goal)
-        self._traj_client.wait_for_result()   # <-- blocks until done
+        self._traj_client.wait_for_result()
         status = self._traj_client.get_state()
         if status != actionlib.GoalStatus.SUCCEEDED:
-            rospy.logwarn(f"Arm trajectory failed with status {status}")
+            rospy.logwarn(f"Joint trajectory failed: {status}")
 
-    def move_gripper(self, width, duration=1.0):
+    def go_to_pose(self, target_pose: Pose, wait: bool = True):
+        """Use MoveIt to plan & execute to a Cartesian end-effector pose."""
+        self.group.set_pose_target(target_pose)
+        plan = self.group.plan()
+        # plan is a tuple (success_flag, plan_msg, planning_time, error_code)
+        # for newer MoveIt versions, plan itself is a RobotTrajectory
+        if hasattr(plan, 'joint_trajectory'):
+            traj = plan
+        else:
+            success, traj, _, _ = plan
+            if not success:
+                rospy.logwarn("MoveIt planning failed")
+                return False
+
+        self.group.execute(traj, wait=wait)
+        self.group.stop()
+        self.group.clear_pose_targets()
+        return True
+
+    def move_gripper(self, width: float, duration: float = 1.0):
+        """Open/close gripper to given width (0.0 closed, ~0.05 open)."""
         width = max(0.0, min(0.05, width))
-
-        finger_pos = width / 2.0
-
-        # Create trajectory message
+        pos = width / 2.0
         traj = JointTrajectory()
         traj.joint_names = self.gripper_joint_names
 
-        # Create trajectory point
-        point = JointTrajectoryPoint()
-        point.positions = [finger_pos, finger_pos]
-        point.time_from_start = rospy.Duration(duration)
-
-        # Add point to trajectory
-        traj.points = [point]
-
-        # Publish gripper message
+        pt = JointTrajectoryPoint()
+        pt.positions = [pos, pos]
+        pt.time_from_start = rospy.Duration(duration)
+        traj.points = [pt]
         traj.header.stamp = rospy.Time.now()
-        self.gripper_pub.publish(traj)
 
-        # Wait for motion to complete
-        rospy.sleep(duration + 0.5)
+        self.gripper_pub.publish(traj)
+        rospy.sleep(duration + 0.2)
+
+    def shutdown(self):
+        moveit_commander.roscpp_shutdown()
 
 
 if __name__ == '__main__':
-    arm_control = LocobotArmControl()
+    arm = LocobotArmControl()
 
-    # Define preset positions
-    positions = {
-        'home': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        'up': [0.0, -1.0, 0.0, 0.0, 0.0, 0.0],
-        'forward': [0.0, 0.0, -1.5, 0.0, 0.0, 0.0],
-        'side': [1.5, 0.0, 0.0, 0.0, 0.0, 0.0],
-        'ready': [0.0, -0.5, -0.5, 0.0, 0.0, 0.0]
-    }
+    home = [0, 0, 0, 0, 0, 0]
+    arm.move_arm_joints(home)
 
-    arm_control.move_arm(positions['side'])
+    target = Pose()
+    target.position.x = 0.3
+    target.position.y = 0.0
+    target.position.z = 0.4
+    target.orientation.w = 1.0
+    arm.go_to_pose(target)
 
-    arm_control.move_gripper(0.05)  # Fully open
-    arm_control.move_gripper(0.0)   # Fully closed
+    arm.move_gripper(0.05)
+    arm.move_gripper(0.0)
 
-    arm_control.print_current_positions()
-
-    trajectory_example = [
-        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        [0.1, 0.0, 0.0, 0.0, 0.0, 0.0],
-        [0.2, 0.0, 0.0, 0.0, 0.0, 0.0],
-        [0.3, 0.0, 0.0, 0.0, 0.0, 0.0],
-        [0.3, 0.1, 0.0, 0.0, 0.0, 0.0],
-        [0.3, 0.2, 0.0, 0.0, 0.0, 0.0],
-        [0.0, 0.5, 0.0, 0.0, 0.0, 0.0],
-    ]
-
-    speed = 0.5
-    for i, traj in enumerate(trajectory_example):
-        if i >= 1:
-            past_traj = trajectory_example[i-1]
-        else:
-            past_traj = [1.5, 0.0, 0.0, 0.0, 0.0, 0.0]
-
-        time_needed = np.linalg.norm(np.array(traj)-np.array(past_traj))/speed
-        arm_control.move_arm(traj, time_needed)
+    arm.shutdown()
