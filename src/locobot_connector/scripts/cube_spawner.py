@@ -2,6 +2,7 @@
 
 import rospy
 import random
+import ast
 from gazebo_msgs.srv import SpawnModel, DeleteModel
 from geometry_msgs.msg import Pose
 
@@ -52,7 +53,7 @@ class CubeSpawner:
         b = random.random()
         return f"{r} {g} {b} 1"
 
-    def spawn_cubes(self, num_cubes, pattern=None):
+    def spawn_cubes(self, num_cubes, pattern=None, positions=None):
         # Delete any old cubes
         for i in range(100):
             try:
@@ -63,7 +64,13 @@ class CubeSpawner:
         # Spawn new cubes
         for i in range(num_cubes):
             # determine target position
-            if pattern == "line":
+            if positions and i < len(positions):
+                # Use provided position
+                pos = positions[i]
+                x = pos[0]
+                y = pos[1]
+                z = pos[2] if len(pos) > 2 else 0.015
+            elif pattern == "line":
                 x = 0.5
                 y = -0.2 + (i * 0.1)
                 z = 0.015
@@ -108,8 +115,17 @@ if __name__ == '__main__':
     try:
         spawner = CubeSpawner()
         num_cubes = rospy.get_param('~num_cubes', 1)
-        pattern   = rospy.get_param('~pattern', 'random')
-        spawner.spawn_cubes(num_cubes, pattern)
+        pattern = rospy.get_param('~pattern', 'random')
+        positions_str = rospy.get_param('~positions', '[]')
+        
+        # Convert string representation of list to actual list
+        try:
+            positions = ast.literal_eval(positions_str)
+        except:
+            rospy.logwarn("Invalid positions parameter. Using default positions.")
+            positions = None
+            
+        spawner.spawn_cubes(num_cubes, pattern, positions)
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

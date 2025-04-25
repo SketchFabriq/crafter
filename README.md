@@ -20,3 +20,8 @@ rosrun xacro xacro \
   show_gripper_fingers:=true \
   external_urdf_loc:="" \
 > ~/ros_ws/locobot_full.urdf
+
+
+```bash
+roslaunch locobot_connector cube_spawner.launch num_cubes:=5 pattern:=grid
+```

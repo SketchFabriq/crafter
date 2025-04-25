@@ -400,7 +400,7 @@
     </inertial>
   </link>
   <gazebo reference="front_caster_joint">
-    <preserveFixedJoint>true</preserveFixedJoint>
+    <implicitSpringDamper>1</implicitSpringDamper>
   </gazebo>
   <gazebo reference="front_caster_link">
     <material>Gazebo/DarkGrey</material>
@@ -2008,4 +2008,3 @@
   <!-- ********************************** Lidar **********************************  -->
   <!-- show_lidar -->
 </robot>
-
