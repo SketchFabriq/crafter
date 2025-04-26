@@ -4,6 +4,7 @@ services:
       context: .devcontainer
       dockerfile: Dockerfile
     image: ghcr.io/sketchfabriq/loco
+    network_mode: host
     volumes:
       - ./:/home/vscode/ros_ws/
       - /tmp/.X11-unix:/tmp/.X11-unix
