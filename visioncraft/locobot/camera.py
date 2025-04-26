@@ -6,7 +6,7 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import sensor_msgs.point_cloud2 as pc2
-
+from visioncraft.utils.transform_utils import transform_point_to_base_frame
 
 class LocobotCamera:
     def __init__(self,
@@ -82,6 +82,10 @@ class LocobotCamera:
         self._pan_pub.publish(Float64(pan_rad))
         self._tilt_pub.publish(Float64(tilt_rad))
         rospy.sleep(wait_s)
+
+    def get_target_coordinate_from_camera(self, point_camera):
+        point_base = transform_point_to_base_frame(point_camera)
+        return point_base
 
 if __name__ == '__main__':
     cam = LocobotCamera()
