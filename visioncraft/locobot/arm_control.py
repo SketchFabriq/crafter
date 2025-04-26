@@ -138,7 +138,7 @@ class LocobotArmControl:
         target_pose = Pose()
         target_pose.position.x = coordinate[0]
         target_pose.position.y = coordinate[1]
-        target_pose.position.z = max(0.01, coordinate[2] + 0.2) # offset to be on top of the block
+        target_pose.position.z = max(0.1, coordinate[2] + 0.2) # offset to be on top of the block
 
         # Create a quaternion for (roll=0, pitch=-90°, yaw=0)
         q = quaternion_from_euler(0, np.pi/2, 0) # pinch down
@@ -151,7 +151,7 @@ class LocobotArmControl:
         grab_pose = Pose()
         grab_pose.position.x = coordinate[0]
         grab_pose.position.y = coordinate[1]
-        grab_pose.position.z = max(0.01, min(0.04, coordinate[2]))
+        grab_pose.position.z = max(0.01, min(0.4, coordinate[2]))
         grab_pose.orientation = target_pose.orientation
 
         # Execute the pick sequence
