@@ -1,11 +1,12 @@
 {
-  "name": "ROS2 Humble Dev Container",
+  "name": "ROS Noetic Dev Container",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "visioncraft",
   "workspaceFolder": "/home/vscode/ros_ws",
   "mounts": [
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/vscode/.bash_history,type=bind"
   ],
+  "postCreateCommand": "bash -c 'source ~/robogym_ws/devel/setup.bash && cd /home/vscode/ros_ws && catkin_make && source /home/vscode/ros_ws/devel/setup.bash && echo \"source ~/ros_ws/devel/setup.bash\" >> /home/vscode/.bashrc'",
   "customizations": {
     "vscode": {
       "extensions": [
