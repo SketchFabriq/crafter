@@ -7,7 +7,8 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
-
+import numpy as np
+from tf.transformations import quaternion_from_euler
 
 class LocobotArmControl:
     def __init__(self,
@@ -118,13 +119,13 @@ class LocobotArmControl:
 
     def move_gripper(self, width: float, duration: float = 1.0):
         """Open/close gripper to given width (0.0 closed, ~0.05 open)."""
-        width = max(0.0, min(0.05, width))
+        width = max(0.0, min(0.1, width))
         pos = width / 2.0
         traj = JointTrajectory()
         traj.joint_names = self.gripper_joint_names
 
         pt = JointTrajectoryPoint()
-        pt.positions = [pos, pos]
+        pt.positions = [pos, -pos]
         pt.time_from_start = rospy.Duration(duration)
         traj.points = [pt]
         traj.header.stamp = rospy.Time.now()
@@ -132,6 +133,33 @@ class LocobotArmControl:
         self.gripper_pub.publish(traj)
         rospy.sleep(duration + 0.2)
 
+    def pick(self, coordinate : list, size: int = 0.03):
+        # Create target poses
+        target_pose = Pose()
+        target_pose.position.x = coordinate[0]
+        target_pose.position.y = coordinate[1]
+        target_pose.position.z = max(0.1, coordinate[2] + 0.2) # offset to be on top of the block
+
+        # Create a quaternion for (roll=0, pitch=-90°, yaw=0)
+        q = quaternion_from_euler(0, np.pi/2, 0) # pinch down
+        target_pose.orientation.x = q[0]
+        target_pose.orientation.y = q[1]
+        target_pose.orientation.z = q[2]
+        target_pose.orientation.w = q[3]
+
+        # Create the grab pose
+        grab_pose = Pose()
+        grab_pose.position.x = coordinate[0]
+        grab_pose.position.y = coordinate[1]
+        grab_pose.position.z = max(0.01, min(0.4, coordinate[2]))
+        grab_pose.orientation = target_pose.orientation
+
+        # Execute the pick sequence
+        self.move_gripper(size * 2)  # Open gripper
+        self.go_to_pose(target_pose)  # Move to approach position
+        self.go_to_pose(grab_pose)  # Move down to grab
+        self.move_gripper(size * 0.9)  # Close gripper
+            
     def shutdown(self):
         moveit_commander.roscpp_shutdown()
 
