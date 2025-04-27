@@ -50,14 +50,31 @@ RUN curl -sSL https://raw.githubusercontent.com/Interbotix/interbotix_ros_rovers
 ENV TERM=xterm
 RUN ./xslocobot_install.sh -d noetic -b create3 -p ~/interbotix_ws -n
 
+# Fix permissions
+USER root
+RUN chown -R $USERNAME:$USERNAME /home/$USERNAME
+USER $USERNAME
+
 # Auto-source ROS and workspace
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc \
     && echo "source /home/$USERNAME/interbotix_ws/devel/setup.bash" >> ~/.bashrc
 
-# Fix permissions
-USER root
-RUN chown -R $USERNAME:$USERNAME /home/$USERNAME
 
-# Final defaults
-USER $USERNAME
-WORKDIR /home/$USERNAME/
+ENV ROBOGYM_WS=/home/$USERNAME/robogym_ws
+
+# Install robogym server and build it
+WORKDIR $ROBOGYM_WS/src
+RUN git clone -b add_locobot https://github.com/montrealrobotics/robo-gym-robot-servers.git
+RUN rm $ROBOGYM_WS/src/robo-gym-robot-servers/interbotix_rover_robot_server/CATKIN_IGNORE
+
+WORKDIR $ROBOGYM_WS
+RUN /bin/bash -c "source /home/$USERNAME/interbotix_ws/devel/setup.bash && catkin init && catkin build"
+RUN echo "source $ROBOGYM_WS/devel/setup.bash" >> ~/.bashrc
+
+# Clone and install robo-gym client
+WORKDIR /home/$USERNAME
+RUN git clone -b add_locobot https://github.com/montrealrobotics/robo-gym.git \
+    && pip install --user -e robo-gym
+
+# Final working directory
+WORKDIR /home/$USERNAME
