@@ -6,7 +6,7 @@
 ### Starting the Robot using moveit
 
 ```bash
-roslaunch interbotix_xslocobot_moveit_interface xslocobot_moveit_interface.launch robot_model:=locobot_wx250s show_lidar:=true use_actual:=true use_cpp_interface:=true
+roslaunch interbotix_xslocobot_moveit_interface xslocobot_moveit_interface.launch robot_model:=locobot_wx250s show_lidar:=true use_gazebo:=true use_cpp_interface:=true
 ```
 
 rosrun xacro xacro \
@@ -28,3 +28,5 @@ roslaunch locobot_connector cube_spawner.launch num_cubes:=5 pattern:=grid
 
 
 export ROS_MASTER_URI=http://172.19.0.128:11311
+
+docker-compose up -d --build
