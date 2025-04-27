@@ -133,7 +133,7 @@ class LocobotArmControl:
         self.gripper_pub.publish(traj)
         rospy.sleep(duration + 0.2)
 
-    def pick(self, coordinate : list, size: int = 0.03):
+    def pick(self, coordinate: list, size: int = 0.03):
         # Create target poses
         target_pose = Pose()
         target_pose.position.x = coordinate[0]
@@ -141,7 +141,7 @@ class LocobotArmControl:
         target_pose.position.z = max(0.1, coordinate[2] + 0.2) # offset to be on top of the block
 
         # Create a quaternion for (roll=0, pitch=-90°, yaw=0)
-        q = quaternion_from_euler(0, np.pi/2, 0) # pinch down
+        q = quaternion_from_euler(0, np.pi/2, 0)  # pinch down
         target_pose.orientation.x = q[0]
         target_pose.orientation.y = q[1]
         target_pose.orientation.z = q[2]
@@ -159,7 +159,32 @@ class LocobotArmControl:
         self.go_to_pose(target_pose)  # Move to approach position
         self.go_to_pose(grab_pose)  # Move down to grab
         self.move_gripper(size * 0.9)  # Close gripper
-            
+
+    def place(self, coordinate: list, size: int = 0.03):
+        # Create target poses
+        target_pose = Pose()
+        target_pose.position.x = coordinate[0]
+        target_pose.position.y = coordinate[1]
+        target_pose.position.z = max(0.1, coordinate[2] + 0.2)
+        # Create a quaternion for (roll=0, pitch=-90°, yaw=0)
+        q = quaternion_from_euler(0, np.pi/2, 0)
+        target_pose.orientation.x = q[0]
+        target_pose.orientation.y = q[1]
+        target_pose.orientation.z = q[2]
+        target_pose.orientation.w = q[3]
+
+        # Create the drop pose
+        drop_pose = Pose()
+        drop_pose.position.x = coordinate[0]
+        drop_pose.position.y = coordinate[1]
+        drop_pose.position.z = max(0.01, min(0.4, coordinate[2]))
+        drop_pose.orientation = target_pose.orientation
+        
+        # Execute the place sequence
+        self.go_to_pose(target_pose)
+        self.go_to_pose(drop_pose)
+        self.move_gripper(size * 2)  # Open gripper
+        
     def shutdown(self):
         moveit_commander.roscpp_shutdown()
 
