@@ -20,32 +20,43 @@ class CubeSpawner:
         # SDF template with internal pose zeroed out
         self.cube_template = """
         <sdf version="1.5">
-          <model name="cube_{0}">
-            <pose>0 0 0 0 0 0</pose>
-            <link name="link">
-              <visual name="visual">
-                <geometry>
-                  <box>
-                    <size>0.03 0.03 0.03</size>
-                  </box>
-                </geometry>
-                <material>
-                  <ambient>{1}</ambient>
-                  <diffuse>{2}</diffuse>
-                  <specular>0.1 0.1 0.1 1</specular>
-                </material>
-              </visual>
-              <collision name="collision">
-                <geometry>
-                  <box>
-                    <size>0.03 0.03 0.03</size>
-                  </box>
-                </geometry>
-              </collision>
-            </link>
-          </model>
-        </sdf>
-        """
+        <model name="cube_{0}">
+          <pose>0 0 0 0 0 0</pose>
+          <link name="link">
+            <inertial>
+              <mass>0.01</mass>
+              <inertia>
+                <ixx>0.0001</ixx>
+                <iyy>0.0001</iyy>
+                <izz>0.0001</izz>
+                <ixy>0.0</ixy>
+                <ixz>0.0</ixz>
+                <iyz>0.0</iyz>
+              </inertia>
+            </inertial>
+            <visual name="visual">
+              <geometry>
+                <box>
+                  <size>0.03 0.03 0.03</size>
+                </box>
+              </geometry>
+              <material>
+                <ambient>{1}</ambient>
+                <diffuse>{2}</diffuse>
+                <specular>0.1 0.1 0.1 1</specular>
+              </material>
+            </visual>
+            <collision name="collision">
+              <geometry>
+                <box>
+                  <size>0.03 0.03 0.03</size>
+                </box>
+              </geometry>
+            </collision>
+          </link>
+        </model>
+      </sdf>
+      """
 
     def generate_random_color(self):
         r = random.random()
