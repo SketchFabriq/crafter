@@ -40,10 +40,6 @@ RUN ln -sf /bin/true /usr/bin/systemctl
 USER $USERNAME
 WORKDIR /home/$USERNAME
 
-# Pre install requirements
-COPY --chown=$USERNAME:$USERNAME requirements.txt /home/$USERNAME/
-RUN python3 -m pip install --user -r requirements.txt
-
 # Create Interbotix workspace
 # RUN mkdir -p interbotix_ws/src
 
@@ -79,6 +75,10 @@ RUN echo "source $ROBOGYM_WS/devel/setup.bash" >> ~/.bashrc
 WORKDIR /home/$USERNAME
 RUN git clone -b add_locobot https://github.com/montrealrobotics/robo-gym.git \
     && python3 -m pip install --user -e robo-gym
+
+# Pre install requirements
+COPY --chown=$USERNAME:$USERNAME requirements.txt /home/$USERNAME/
+RUN python3 -m pip install --user -r requirements.txt
 
 # Final working directory
 WORKDIR /home/$USERNAME
