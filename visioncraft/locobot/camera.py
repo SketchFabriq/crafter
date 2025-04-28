@@ -8,6 +8,22 @@ import numpy as np
 import sensor_msgs.point_cloud2 as pc2
 from visioncraft.utils.transform_utils import transform_point_to_base_frame
 
+topic_map = {
+    "real": {
+        'img_topic': '/locobot/camera/color/image_raw',
+        'depth_topic': '/locobot/camera/depth/image_rect_raw',
+        'pan_topic': '/locobot/pan_controller/command',
+        'tilt_topic': '/locobot/tilt_controller/command'
+    },
+    "sim": {
+        'img_topic': '/locobot/camera/color/image_raw',
+        'depth_topic': '/locobot/camera/depth_registered/points',
+        'pan_topic': '/locobot/pan_controller/command',
+        'tilt_topic': '/locobot/tilt_controller/command'
+    }
+}
+
+
 class LocobotCamera:
     def __init__(self,
                  img_topic='/locobot/camera/color/image_raw',
