@@ -51,7 +51,7 @@ class LocobotCamera:
 
     def _img_cb(self, msg):
         try:
-            self.image = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+            self.image = self.bridge.imgmsg_to_cv2(msg, 'rgb8')
         except Exception as e:
             rospy.logerr(f"cv_bridge: {e}")
 

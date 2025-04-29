@@ -1,5 +1,5 @@
 import os
-os.environ["ROS_IP"] = "192.168.0.190"
+os.environ["ROS_IP"] = "192.168.0.17"
 os.environ["ROS_MASTER_URI"] = "http://192.168.0.17:11311"
 
 from visioncraft.locobot.camera import LocobotCamera
@@ -8,25 +8,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-cam = LocobotCamera()
+cam = LocobotCamera(use_simulation=False)
 arm_control = LocobotArmControl(use_simulation=False)
 
 arm_control.open_gripper()
 
 arm_control.close_gripper()
 
-height, width = cam.get_image().shape[:2]
+height, width = cam.image.shape[:2]
 center_x = 250
 center_y = 340
 
-plt.imshow(cam.get_image())
+plt.imshow(cam.image)
 plt.scatter(center_x, center_y, color='red')
 plt.show()
-plt.imshow(cam.depth)
+plt.imshow(cam.depth_image)
 plt.scatter(center_x, center_y, color='red')
 plt.show()
 
-point_camera = cam.depth[center_x, center_y]
+point_camera = cam.depth_image[center_x, center_y]
 print(point_camera)
 
 point_cam = cam.depth_to_xyz(center_x, center_y)
@@ -42,5 +42,6 @@ arm_control.pick(point_base, size=0.03)
 point_base_2 = point_base + np.array([0.1, 0.1, 0.03])
 arm_control.place(point_base_2, size=0.03)
 arm_control.open_gripper()
+arm_control.move_arm_joints(LocobotArmControl.sleep)
 
 
