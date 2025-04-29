@@ -39,22 +39,27 @@ class LocobotArmControl:
         rospy.loginfo("Joint‐space action server ready")
 
         # Gripper single action client
-        self.gripper_pub = rospy.Publisher(
-            "/locobot/commands/joint_single",
-            JointSingleCommand,
-            queue_size=1
-        )
+        if self.use_simulation:
+            self.gripper_pub = rospy.Publisher(
+                    "/locobot/gripper_controller/command",
+                    JointTrajectory,
+                    queue_size=1
+                )
+            self.gripper_joint_names = ['left_finger', 'right_finger']
+        else:
+            self.gripper_pub = rospy.Publisher(
+                "/locobot/commands/joint_single",
+                JointSingleCommand,
+                queue_size=1
+            )
+            self.gripper_joint_names = ['gripper']
 
+
+    
         self.arm_joint_names = [
             'waist', 'shoulder', 'elbow',
             'forearm_roll', 'wrist_angle', 'wrist_rotate'
         ]
-
-        # In simulation, "gripper" joint doesn't work
-        if use_simulation:
-            self.gripper_joint_names = ['left_finger', 'right_finger']
-        else:
-            self.gripper_joint_names = ['gripper']
 
 
         # Initialize MoveIt
@@ -134,34 +139,27 @@ class LocobotArmControl:
 
     def move_gripper(self, width: float, duration: float = 1.0):
         """Open/close gripper to given width"""
-        width = max(0.0, min(2.0, width)) # Empiracal limits
-        
-        traj = JointTrajectory()
-        traj.joint_names = self.gripper_joint_names
-        pt = JointTrajectoryPoint()
+        max_width = 2.0
+        width = max(0.0, min(max_width, width)) # Empiracal limits
 
         if self.use_simulation:
+            traj = JointTrajectory()
+            pt = JointTrajectoryPoint ()
+
+            traj.joint_names = self.gripper_joint_names
             pt.positions = [width, -width]
-        else:
-            pt.positions = [width]
-
-        pt.time_from_start = rospy.Duration(duration)
-        traj.points = [pt]
-        traj.header.stamp = rospy.Time.now()
-        self.is_holding = False
+            pt.time_from_start = rospy.Duration(duration)
+            traj.points = [pt]
+            traj.header.stamp = rospy.Time.now()
         
-        self.gripper_pub.publish(traj)
-    
-    def open_gripper(self):
-        self.move_gripper(2.0)
-
-    def close_gripper(self):
-        if self.use_simulation:
-            self.move_gripper(0.0)
-            return True
+            self.gripper_pub.publish(traj)
+            rospy.sleep(duration)
         else:
-            while width >= 0.0:
-                # command the next smaller opening
+            self.is_holding = False
+            cmd = JointSingleCommand(name="gripper", cmd=max_width)
+            self.gripper_pub.publish(cmd)
+            rospy.sleep(0.1)
+            while width >= 0.0: # Close to desired width
                 cmd = JointSingleCommand(name="gripper", cmd=width)
                 self.gripper_pub.publish(cmd)
                 rospy.sleep(0.1)
@@ -174,6 +172,14 @@ class LocobotArmControl:
 
             rospy.logwarn("❌ No object detected before fully closed")
             return False
+        return False
+        
+    
+    def open_gripper(self):
+        self.move_gripper(2.0)
+
+    def close_gripper(self):
+        self.move_gripper(0.0)           
 
 
     def pick(self, coordinate: list, size: int = 0.03):
