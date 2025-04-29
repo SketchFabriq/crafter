@@ -63,8 +63,7 @@ class LocobotCamera:
 
     def _depth_img_cb(self, msg):
         depth_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-        rospy.loginfo(f"encoding: {msg.encoding}")
-        self.depth = depth_img
+        self.depth = depth_img.astype(np.float32) * 0.001
 
     def get_image(self):
         return self.image
