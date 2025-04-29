@@ -156,22 +156,23 @@ class LocobotArmControl:
             rospy.sleep(duration)
         else:
             self.is_holding = False
-            cmd = JointSingleCommand(name="gripper", cmd=max_width)
-            self.gripper_pub.publish(cmd)
-            rospy.sleep(0.1)
-            while width >= 0.0: # Close to desired width
-                cmd = JointSingleCommand(name="gripper", cmd=width)
+            if width != 0.0:
+                cmd = JointSingleCommand(name="gripper", cmd=max_width)
                 self.gripper_pub.publish(cmd)
                 rospy.sleep(0.1)
+            else:
+                while width >= 0.0: # Close to desired width
+                    cmd = JointSingleCommand(name="gripper", cmd=width)
+                    self.gripper_pub.publish(cmd)
+                    rospy.sleep(0.1)
 
-                width -= 0.05
-                if self.curr_effort > self.effort_thresh:
-                    print("object detected")
-                    self.is_holding = True
-                    return True
+                    width -= 0.05
+                    if self.curr_effort > self.effort_thresh:
+                        print("object detected")
+                        self.is_holding = True
+                        return True
 
-            rospy.logwarn("❌ No object detected before fully closed")
-            return False
+                rospy.logwarn("❌ No object detected before fully closed")
         return False
         
     
