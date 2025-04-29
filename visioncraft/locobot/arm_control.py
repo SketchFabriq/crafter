@@ -161,6 +161,7 @@ class LocobotArmControl:
                 self.gripper_pub.publish(cmd)
                 rospy.sleep(0.1)
             else:
+                width = max_width
                 while width >= 0.0: # Close to desired width
                     cmd = JointSingleCommand(name="gripper", cmd=width)
                     self.gripper_pub.publish(cmd)
@@ -238,16 +239,6 @@ class LocobotArmControl:
     def _joint_states_cb(self, msg: JointState):
         efforts = dict(zip(msg.name, msg.effort))
         self.curr_effort =  abs(efforts.get("gripper", 0.0))
-        if self.curr_effort > self.effort_thresh:
-            print(self.curr_effort)
-            release = JointTrajectory()
-            release.joint_names = self.gripper_joint_names
-            pt = JointTrajectoryPoint()
-            pt.positions = [1, -1]  # a slight open
-            pt.time_from_start = rospy.Duration(0.1)
-            release.header.stamp = rospy.Time.now()
-            release.points = [pt]
-            self.gripper_pub.publish(release)
 
 
     def shutdown(self):
