@@ -13,18 +13,23 @@ from interbotix_xs_msgs.msg import JointSingleCommand
 
 class LocobotArmControl:
     def __init__(self,
+                 use_simulation: bool = True,
                  joint_action_topic: str = '/locobot/arm_controller/follow_joint_trajectory',
                  gripper_topic: str = '/locobot/gripper_controller/command',
-                 joint_group_names=None,
-                 gripper_joint_names=None,
                  moveit_ns: str = 'locobot',
                  moveit_group: str = 'interbotix_arm',
                  planning_time: float = 5.0):
-        # --- ROS init ---
+
+        self.use_simulation = use_simulation
+        self.is_holding = False
+        self.effort_thresh = 500
+        self.curr_effort = 0.0
+        
         if not rospy.core.is_initialized():
             rospy.init_node('locobot_arm_control', anonymous=True)
 
-        # --- Joint‐space action client ---
+
+        # Joint action client
         self._traj_client = actionlib.SimpleActionClient(
             joint_action_topic,
             FollowJointTrajectoryAction
@@ -33,21 +38,26 @@ class LocobotArmControl:
         self._traj_client.wait_for_server()
         rospy.loginfo("Joint‐space action server ready")
 
-        # --- Gripper publisher ---
+        # Gripper single action client
         self.gripper_pub = rospy.Publisher(
             "/locobot/commands/joint_single",
             JointSingleCommand,
             queue_size=1
         )
 
-        # --- Joint names ---
-        self.arm_joint_names = joint_group_names or [
+        self.arm_joint_names = [
             'waist', 'shoulder', 'elbow',
             'forearm_roll', 'wrist_angle', 'wrist_rotate'
         ]
-        self.gripper_joint_names = gripper_joint_names or ['left_finger', 'right_finger']
 
-        # --- MoveIt! setup for IK mode ---
+        # In simulation, "gripper" joint doesn't work
+        if use_simulation:
+            self.gripper_joint_names = ['left_finger', 'right_finger']
+        else:
+            self.gripper_joint_names = ['gripper']
+
+
+        # Initialize MoveIt
         moveit_commander.roscpp_initialize(sys.argv)
         self.robot = moveit_commander.RobotCommander(
             robot_description=f"/{moveit_ns}/robot_description",
@@ -62,26 +72,24 @@ class LocobotArmControl:
         self.group.set_planning_time(planning_time)
         self.group.allow_replanning(True)
 
-        self.effort_thresh = 500
-        self.curr_effort = 0.0
-        rospy.Subscriber(
-            "/locobot/dynamixel/joint_states",
-            JointState,
-            self._joint_states_cb,
-            queue_size=1
-        )
+        # Motor effort callback
+        if not use_simulation:
+            rospy.Subscriber(
+                "/locobot/dynamixel/joint_states",
+                JointState,
+                self._joint_states_cb,
+                queue_size=1
+            )
 
-        rospy.sleep(1.0)
+        rospy.sleep(0.5)
         rospy.loginfo("LocobotArmControl initialized")
 
 
 
     def _joint_states_cb(self, msg: JointState):
         self.joint_states = msg
-        # map names→effort
-        efforts = dict(zip(msg.name, msg.effort))
-        # take the max of the two fingers
-        self.curr_effort =  abs(efforts.get("gripper", 0.0))
+        self.efforts = dict(zip(msg.name, msg.effort))
+        self.gripper_effort =  abs(self.efforts.get("gripper", 0.0))
 
     def get_current_joint_positions(self):
         if not self.joint_states:
@@ -112,15 +120,12 @@ class LocobotArmControl:
         """Use MoveIt to plan & execute to a Cartesian end-effector pose."""
         self.group.set_pose_target(target_pose)
         plan = self.group.plan()
+
         # plan is a tuple (success_flag, plan_msg, planning_time, error_code)
-        # for newer MoveIt versions, plan itself is a RobotTrajectory
-        if hasattr(plan, 'joint_trajectory'):
-            traj = plan
-        else:
-            success, traj, _, _ = plan
-            if not success:
-                rospy.logwarn("MoveIt planning failed")
-                return False
+        success, traj, _, _ = plan
+        if not success:
+            rospy.logwarn("MoveIt planning failed")
+            return False
 
         self.group.execute(traj, wait=wait)
         self.group.stop()
@@ -128,60 +133,48 @@ class LocobotArmControl:
         return True
 
     def move_gripper(self, width: float, duration: float = 1.0):
-        """Open/close gripper to given width (0.0 closed, ~0.05 open). (0.4 is open on the real gripper)"""
-        width = max(0.0, min(1.0, width))
-        pos = width / 2.0
+        """Open/close gripper to given width"""
+        width = max(0.0, min(2.0, width)) # Empiracal limits
+        
         traj = JointTrajectory()
         traj.joint_names = self.gripper_joint_names
-
         pt = JointTrajectoryPoint()
 
-        if len(self.gripper_joint_names) ==1:
-            pt.positions = [pos]
+        if self.use_simulation:
+            pt.positions = [width, -width]
         else:
-            pt.positions = [pos, -pos]
+            pt.positions = [width]
 
         pt.time_from_start = rospy.Duration(duration)
         traj.points = [pt]
         traj.header.stamp = rospy.Time.now()
+        self.is_holding = False
         
+        self.gripper_pub.publish(traj)
+    
+    def open_gripper(self):
+        self.move_gripper(2.0)
 
-        # self.gripper_pub.publish(traj)
+    def close_gripper(self):
+        if self.use_simulation:
+            self.move_gripper(0.0)
+            return True
+        else:
+            while width >= 0.0:
+                # command the next smaller opening
+                cmd = JointSingleCommand(name="gripper", cmd=width)
+                self.gripper_pub.publish(cmd)
+                rospy.sleep(0.1)
 
+                width -= 0.05
+                if self.curr_effort > self.effort_thresh:
+                    print("object detected")
+                    self.is_holding = True
+                    return True
 
-        self.close_until_grasp(
-            max_open=1.5,
-            min_closed=0.05,
-            step=0.05,
-            error_thresh=0.02,
-            pause=0.1
-        )
-        effort_thresh = 500
-        
+            rospy.logwarn("❌ No object detected before fully closed")
+            return False
 
-        # If we got here, we never saw a stall—give it a bit to finish:
-        rospy.sleep(0.2)
-
-    def close_until_grasp(self,
-                         max_open=1.5,      # now your open position
-                         min_closed=0.0,   # your closed position
-                         step=0.1,          # tune step size
-                         error_thresh=0.02, # tune threshold (rad)
-                         pause=0.3):        # allow time to move
-        width = max_open
-        while width >= min_closed:
-            # command the next smaller opening
-            cmd = JointSingleCommand(name="gripper", cmd=width)
-            self.gripper_pub.publish(cmd)
-            rospy.sleep(pause)
-
-            width -= step
-            if self.curr_effort > self.effort_thresh:
-                print("object detected")
-                return True
-
-        rospy.logwarn("❌ No object detected before fully closed")
-        return False
 
     def pick(self, coordinate: list, size: int = 0.03):
         # Create target poses
