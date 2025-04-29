@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import rospy
-from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs.msg import Image, CameraInfo, PointCloud2
 from std_msgs.msg import Float64
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import sensor_msgs.point_cloud2 as pc2
 from visioncraft.utils.transform_utils import transform_point_to_base_frame
+from image_geometry import PinholeCameraModel                         # new
+
 
 topic_map = {
     "real": {
@@ -27,7 +29,7 @@ topic_map = {
 class LocobotCamera:
     def __init__(self,
                  img_topic='/locobot/camera/color/image_raw',
-                 depth_topic='/locobot/camera/depth_registered/points',
+                 depth_topic='/locobot/camera/depth/image_rect_raw',
                  pan_topic='/locobot/pan_controller/command',
                  tilt_topic='/locobot/tilt_controller/command'):
 
@@ -37,9 +39,16 @@ class LocobotCamera:
         self.bridge = CvBridge()
         self.image = None
         self.points = None
-        rospy.Subscriber(img_topic, Image, self._img_cb)
-        rospy.Subscriber(depth_topic, PointCloud2, self._depth_cb)
+        self.cam_model = PinholeCameraModel()   
 
+        rospy.Subscriber(img_topic, Image, self._img_cb)
+        rospy.Subscriber(depth_topic, Image, self._depth_img_cb)
+        info_msg = rospy.wait_for_message(
+            '/locobot/camera/depth/camera_info',
+            CameraInfo,
+            timeout=2.0)
+        self.cam_model.fromCameraInfo(info_msg)   
+        
         self._pan_pub = rospy.Publisher(pan_topic, Float64, queue_size=1)
         self._tilt_pub = rospy.Publisher(tilt_topic, Float64, queue_size=1)
 
@@ -52,12 +61,10 @@ class LocobotCamera:
         except Exception as e:
             rospy.logerr(f"cv_bridge: {e}")
 
-    def _depth_cb(self, msg):
-        try:
-            # Convert point cloud to numpy array
-            self.points = np.array(list(pc2.read_points(msg, skip_nans=True)))
-        except Exception as e:
-            rospy.logerr(f"point cloud conversion: {e}")
+    def _depth_img_cb(self, msg):
+        depth_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+        rospy.loginfo(f"encoding: {msg.encoding}")
+        self.depth = depth_img
 
     def get_image(self):
         return self.image
@@ -67,22 +74,21 @@ class LocobotCamera:
 
     def get_point_at_pixel(self, x, y):
         """Get the 3D point at pixel coordinates (x,y)"""
-        if self.points is None:
-            return None
-        
-        # Find the closest point to the pixel coordinates
-        # Assuming points are ordered in the same way as the image pixels
-        height, width = self.image.shape[:2]
-        if x < 0 or x >= width or y < 0 or y >= height:
-            return None
-            
-        # Calculate the index in the point cloud array
-        idx = y * width + x
-        if idx >= len(self.points):
-            return None
-            
-        return self.points[idx]
+        return None if self.depth is None else self.depth[y, x]
 
+    def depth_to_xyz(self, u, v):
+        """
+        (u,v)     : pixel coordinate in colour image frame
+        returns   : (x,y,z) in the **camera optical frame**
+        """
+        Z = float(self.depth[v, u])         # metres
+        if Z == 0.0 or np.isnan(Z):        # 0 == invalid for RealSense
+            return None
+        X = (u - self.cam_model.cx()) * Z / self.cam_model.fx()
+        Y = (v - self.cam_model.cy()) * Z / self.cam_model.fy()
+        return np.array([X, Y, Z], dtype=np.float32)
+
+    
     def pan(self, angle_rad, wait_s=0.5):
         """Rotate head_pan_joint to angle_rad"""
         self._pan_pub.publish(Float64(angle_rad))

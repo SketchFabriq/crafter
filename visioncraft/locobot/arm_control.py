@@ -212,14 +212,14 @@ class LocobotArmControl:
         grab_pose = Pose()
         grab_pose.position.x = coordinate[0]
         grab_pose.position.y = coordinate[1]
-        grab_pose.position.z = max(0.01, min(0.4, coordinate[2]))
+        grab_pose.position.z = max(0.03, min(0.4, coordinate[2]))
         grab_pose.orientation = target_pose.orientation
 
         # Execute the pick sequence
-        self.move_gripper(size * 2)  # Open gripper
+        self.open_gripper()  # Open gripper
         self.go_to_pose(target_pose)  # Move to approach position
         self.go_to_pose(grab_pose)  # Move down to grab
-        self.move_gripper(size * 0.9)  # Close gripper
+        self.close_gripper() # Close gripper
 
     def place(self, coordinate: list, size: int = 0.03):
         # Create target poses
