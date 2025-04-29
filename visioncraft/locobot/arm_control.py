@@ -22,8 +22,10 @@ class LocobotArmControl:
 
         self.use_simulation = use_simulation
         self.is_holding = False
-        self.effort_thresh = 500
-        self.curr_effort = 0.0
+        self.effort_thresh = 280
+        self.gripper_effort = 0.0
+        self.joint_states = None
+        self.efforts = None
         
         if not rospy.core.is_initialized():
             rospy.init_node('locobot_arm_control', anonymous=True)
@@ -96,6 +98,8 @@ class LocobotArmControl:
         self.efforts = dict(zip(msg.name, msg.effort))
         self.gripper_effort =  abs(self.efforts.get("gripper", 0.0))
 
+
+
     def get_current_joint_positions(self):
         if not self.joint_states:
             rospy.logwarn("No joint states yet")
@@ -139,7 +143,7 @@ class LocobotArmControl:
 
     def move_gripper(self, width: float, duration: float = 1.0):
         """Open/close gripper to given width"""
-        max_width = 2.0
+        max_width = 1.1
         width = max(0.0, min(max_width, width)) # Empiracal limits
 
         if self.use_simulation:
@@ -157,21 +161,27 @@ class LocobotArmControl:
         else:
             self.is_holding = False
             if width != 0.0:
-                cmd = JointSingleCommand(name="gripper", cmd=max_width)
+                cmd = JointSingleCommand(name="gripper", cmd=width)
                 self.gripper_pub.publish(cmd)
                 rospy.sleep(0.1)
             else:
-                width = max_width
-                while width >= 0.0: # Close to desired width
-                    cmd = JointSingleCommand(name="gripper", cmd=width)
+                target_width = self.joint_states.position[6]
+                actual_width = self.joint_states.position[6]
+                while actual_width >= 0.0: # Close to desired width
+                    target_width -= 0.1
+                    cmd = JointSingleCommand(name="gripper", cmd=target_width)
                     self.gripper_pub.publish(cmd)
-                    rospy.sleep(0.1)
+                    
+                    while actual_width > (target_width + 0.02):
+                        rospy.sleep(0.05)
+                        actual_width = self.joint_states.position[6]
+                        # print("Gripper closing")
+                        # print(self.gripper_effort)
 
-                    width -= 0.05
-                    if self.curr_effort > self.effort_thresh:
-                        print("object detected")
-                        self.is_holding = True
-                        return True
+                        if self.gripper_effort > self.effort_thresh:
+                            print("object detected")
+                            self.is_holding = True
+                            return True
 
                 rospy.logwarn("❌ No object detected before fully closed")
         return False
@@ -235,11 +245,6 @@ class LocobotArmControl:
         self.go_to_pose(target_pose)
         self.go_to_pose(drop_pose)
         self.move_gripper(size * 2)  # Open gripper
-      
-    def _joint_states_cb(self, msg: JointState):
-        efforts = dict(zip(msg.name, msg.effort))
-        self.curr_effort =  abs(efforts.get("gripper", 0.0))
-
 
     def shutdown(self):
         moveit_commander.roscpp_shutdown()
