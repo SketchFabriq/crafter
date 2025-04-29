@@ -168,6 +168,7 @@ class LocobotArmControl:
         self.move_gripper(size * 0.9)  # Close gripper
         print("Trying to go to target grabbed")
         self.go_to_pose(grabbed_pose) # Lift grabbed object
+        return grabbed_pose
 
     def place(self, coordinate: list, size: int = 0.03):
         print("Trying to place cube at coordinates : ", coordinate)
