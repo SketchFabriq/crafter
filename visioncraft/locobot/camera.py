@@ -14,7 +14,7 @@ class LocobotCamera:
     def __init__(self,
                  img_topic='/locobot/camera/color/image_raw',
                  depth_topic='/locobot/camera/depth_registered/points',
-                 depth_img_topic='/locobot/camera/depth/image_rect_raw',
+                 depth_img_topic='/locobot/camera/aligned_depth_to_color/image_raw',
                  pan_topic='/locobot/pan_controller/command',
                  tilt_topic='/locobot/tilt_controller/command',
                  use_simulation=True):
@@ -33,7 +33,7 @@ class LocobotCamera:
         if not self.use_simulation:
             self.cam_model = PinholeCameraModel()   
             info_msg = rospy.wait_for_message(
-                '/locobot/camera/depth/camera_info',
+                '/locobot/camera/aligned_depth_to_color/camera_info',
                 CameraInfo,
                 timeout=2.0)
             self.cam_model.fromCameraInfo(info_msg)   

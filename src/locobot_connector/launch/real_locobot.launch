@@ -11,7 +11,8 @@
   <arg name="use_fake"                          default="false"/>
   <arg name="dof"                               default="6"/>
   <arg name="use_camera"                        default="true"/>
-  <arg name="use_rviz"                          default="true"/>
+  <arg name="use_rviz"                          default="false"/>
+  <arg name="use_moveit_rviz"                   default="true"/>
   <arg name="world_name"                        default="$(find interbotix_xslocobot_gazebo)/worlds/xslocobot_gazebo.world"/>
   <arg name="align_depth"                       default="true"/>
 
