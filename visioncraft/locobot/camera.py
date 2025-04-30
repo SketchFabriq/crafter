@@ -80,9 +80,9 @@ class LocobotCamera:
             if idx >= len(self.points):
                 return None
                 
-            return self.points[idx]
+            return self.points[idx][:3]
         else:
-            return None if self.depth_image is None else self.depth_image[y, x]
+            return self.depth_to_xyz(x, y)
 
     def depth_to_xyz(self, u, v):
         """

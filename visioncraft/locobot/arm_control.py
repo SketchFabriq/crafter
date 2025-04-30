@@ -13,8 +13,8 @@ from interbotix_xs_msgs.msg import JointSingleCommand
 
 class LocobotArmControl:
 
-    home = [0, 0, 0, 0, 0, 0]
-    sleep = [0.0015339808305725455, -1.1090681552886963, 1.5646604299545288, -0.0015339808305725455, 0.5016117095947266, -0.0015339808305725455]
+    JOINT_HOME = [0, 0, 0, 0, 0, 0]
+    JOINT_SLEEP = [0.0015339808305725455, -1.1090681552886963, 1.5646604299545288, -0.0015339808305725455, 0.5016117095947266, -0.0015339808305725455]
 
     def __init__(self,
                  use_simulation: bool = True,
@@ -257,10 +257,8 @@ class LocobotArmControl:
 if __name__ == '__main__':
     arm = LocobotArmControl()
 
-    home = [0, 0, 0, 0, 0, 0]
-    sleep = [0.0015339808305725455, -1.1090681552886963, 1.5646604299545288, -0.0015339808305725455, 0.5016117095947266, -0.0015339808305725455]
     # sleep = 
-    arm.move_arm_joints(sleep)
+    arm.move_arm_joints(LocobotArmControl.JOINT_SLEEP)
 
     # target = Pose()
     # target.position.x = 0.3

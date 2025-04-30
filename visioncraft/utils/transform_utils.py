@@ -22,5 +22,5 @@ def transform_point_to_base_frame(point_optical,
                                        rospy.Time(0),
                                        rospy.Duration(1.0))
     out  = tf2_geometry_msgs.do_transform_point(ps, tfm)
-    return np.array([out.point.x, out.point.y, out.point.z], dtype=np.float32)
+    return [out.point.x, out.point.y, out.point.z]
 
