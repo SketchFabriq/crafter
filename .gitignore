@@ -175,3 +175,6 @@ build/*
 # Latte
 data/*
 models/*
+
+# Baseline
+baseline_training/*
