@@ -95,6 +95,18 @@ class LocobotCamera:
         X = (u - self.cam_model.cx()) * Z / self.cam_model.fx()
         Y = (v - self.cam_model.cy()) * Z / self.cam_model.fy()
         return np.array([X, Y, Z], dtype=np.float32)
+    
+    def get_image(self):
+        """Get the latest image from the camera"""
+        if self.image is None:
+            return None
+        return self.image
+    
+    def get_depth_image(self):
+        """Get the latest depth image from the camera"""
+        if self.depth_image is None:
+            return None
+        return self.depth_image
 
     
     def pan(self, angle_rad, wait_s=0.5):
