@@ -221,11 +221,7 @@ class LocobotArmControl:
         grab_pose = Pose()
         grab_pose.position.x = coordinate[0]
         grab_pose.position.y = coordinate[1]
-<<<<<<< HEAD
         grab_pose.position.z = max(0.03, min(0.4, coordinate[2]))
-=======
-        grab_pose.position.z = max(0.015, min(0.4, coordinate[2]))
->>>>>>> main
         grab_pose.orientation = target_pose.orientation
 
         grabbed_pose = Pose()
@@ -234,23 +230,11 @@ class LocobotArmControl:
         grabbed_pose.position.z = 0.2
         grabbed_pose.orientation = target_pose.orientation
         # Execute the pick sequence
-<<<<<<< HEAD
         self.open_gripper()  # Open gripper
-=======
-        self.move_gripper(size * 2)  # Open gripper
-        print("Trying to go to target pick")
->>>>>>> main
         self.go_to_pose(target_pose)  # Move to approach position
         print("Trying to go to target grab")
         self.go_to_pose(grab_pose)  # Move down to grab
-<<<<<<< HEAD
         self.close_gripper() # Close gripper
-=======
-        self.move_gripper(size * 0.9)  # Close gripper
-        print("Trying to go to target grabbed")
-        self.go_to_pose(grabbed_pose) # Lift grabbed object
-        return grabbed_pose
->>>>>>> main
 
     def place(self, coordinate: list, size: int = 0.03):
         print("Trying to place cube at coordinates : ", coordinate)
@@ -290,13 +274,7 @@ class LocobotArmControl:
         print("Trying to go to drop place")
         self.go_to_pose(drop_pose)
         self.move_gripper(size * 2)  # Open gripper
-<<<<<<< HEAD
-
-=======
-        print("trying to go to lifted pose")
-        self.go_to_pose(lifted_pose)
         
->>>>>>> main
     def shutdown(self):
         moveit_commander.roscpp_shutdown()
 
