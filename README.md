@@ -33,6 +33,14 @@ roslaunch locobot_connector cube_spawner.launch
 ```
 
 
+### Adding Latte
+
+To add Latte to the project, you can clone the repository using the following command:
+
+```bash
+git clone https://github.com/arthurfenderbucker/LaTTe-Language-Trajectory-TransformEr.git latte
+```
+
 
 
 ## Baseline
