@@ -10,14 +10,13 @@ from panda_gym.pybullet import PyBullet
 
 from gymnasium import spaces
 
-from .custom_widowx_task import (
+from .custom_task import (
     TouchTask,
     GraspTask,
     LiftTask,
     PickAndPlaceTask,
 )
 from visioncraft.envs.widowx import WidowX
-from visioncraft.envs.locobot import Locobot
 
 
 class BaseWidowXEnv(RobotTaskEnv):
@@ -52,7 +51,7 @@ class BaseWidowXEnv(RobotTaskEnv):
 class WidowXTouchEnv(BaseWidowXEnv):
     def __init__(self, render_mode="rgb_array", control_type="ee", **kwargs):
         sim = PyBullet(render_mode=render_mode, renderer="Tiny")
-        robot = Locobot(
+        robot = WidowX(
             sim,
             block_gripper=False,
             base_position=np.array([-0.3, 0.0, 0.0]),
@@ -67,7 +66,7 @@ class WidowXTouchEnv(BaseWidowXEnv):
 class WidowXGraspEnv(BaseWidowXEnv):
     def __init__(self, render_mode="rgb_array", control_type="ee", **kwargs):
         sim = PyBullet(render_mode=render_mode, renderer="Tiny")
-        robot = Locobot(
+        robot = WidowX(
             sim,
             block_gripper=False,
             base_position=np.array([-0.3, 0.0, 0.0]),
@@ -86,7 +85,7 @@ class WidowXLiftEnv(BaseWidowXEnv):
             renderer="Tiny",
             background_color=np.array([100.0, 100.0, 100.0]),
         )
-        robot = Locobot(
+        robot = WidowX(
             sim,
             block_gripper=False,
             base_position=np.array([-0.3, 0.0, 0.0]),
@@ -101,7 +100,7 @@ class WidowXLiftEnv(BaseWidowXEnv):
 class WidowXPickPlaceEnv(BaseWidowXEnv):
     def __init__(self, render_mode="rgb_array", control_type="ee", **kwargs):
         sim = PyBullet(render_mode=render_mode, renderer="Tiny")
-        robot = Locobot(
+        robot = WidowX(
             sim,
             block_gripper=False,
             base_position=np.array([-0.3, 0.0, 0.0]),

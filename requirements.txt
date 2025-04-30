@@ -10,3 +10,5 @@ ipython==8.12.3
 replicate
 ollama
 openai
+pygame==2.6.1
+stable-baselines3==2.4.1

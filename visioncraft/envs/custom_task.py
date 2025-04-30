@@ -4,6 +4,7 @@ import numpy as np
 from panda_gym.envs.core import Task
 from panda_gym.pybullet import PyBullet
 from panda_gym.utils import distance
+from visioncraft.baseline.utils import shaped_dist
 
 
 class TouchTask(Task):
@@ -112,58 +113,37 @@ class TouchTask(Task):
     
 
     def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
-        d = distance(achieved_goal, desired_goal)
-        # check contact between two pybullet object
-        contact = self.check_collision('robot_arm', "object")
+        return np.array(distance(achieved_goal, desired_goal) < self.threshold, dtype=bool)
 
-        return contact
 
     def compute_reward(
-        self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any]
+        self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}
     ) -> np.ndarray:
-
-        d = distance(achieved_goal, desired_goal)
-
+        d = shaped_dist(achieved_goal, desired_goal)
         if self.reward_type == "sparse":
-            return -np.array(d > self.threshold, dtype=np.float32)
-        else:
-            return -d.astype(np.float32)
-
+            return np.where(d > self.threshold, -1.0, 0.0).astype(np.float32)
+        return (1.0 - d).astype(np.float32)
 
 class GraspTask(TouchTask):
     """Stage 3: Grasping the object successfully"""
 
-    def is_object_grasped(self, achieved_goal: np.ndarray) -> bool:
-        gripper_width = self.robot.get_fingers_width()
-        obj_pos = self.sim.get_base_position("object")
-        ee_pos = achieved_goal
+    def is_object_grasped(self) -> bool:
+        width = self.robot.get_fingers_width() - 0.02  # compensate pad thickness
+        size_ok = self.object_size * 0.9 < width < self.object_size * 1.1
+        close_enough = distance(self.robot.get_ee_position(), self.get_desired_goal()) < self.threshold
+        return size_ok and close_enough
 
-        corrected_gripper_width = gripper_width - 0.02
-
-        # Object is between fingers and close to EE
-        is_closed = corrected_gripper_width < self.object_size * 1.1 and corrected_gripper_width > self.object_size * 0.9
-        is_aligned = distance(ee_pos, obj_pos) < self.threshold
-
-        if is_closed and is_aligned:
-            print("success!!!!")
-
-        return is_closed and is_aligned
 
     def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
-        return np.array(self.is_object_grasped(achieved_goal), dtype=bool)
+        return np.array(self.is_object_grasped(), dtype=bool)
 
-    def compute_reward(
-        self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any]
-    ) -> np.ndarray:
-        if self.is_object_grasped(achieved_goal):
-            return np.array(10.0, dtype=np.float32)  # Success
-
-        # If not grasped, provide shaping reward based on distance
-        d = distance(achieved_goal, desired_goal)
+    def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
+        if self.is_object_grasped():
+            return np.array(1.0, dtype=np.float32)
+        d = shaped_dist(achieved_goal, desired_goal)
         if self.reward_type == "sparse":
-            return np.array(-1.0, dtype=np.float32)  # Failure
-        else:
-            return -d.astype(np.float32)  # Dense reward
+            return np.array(-1.0, dtype=np.float32)
+        return np.array(-d, dtype=np.float32)
 
 
 class LiftTask(GraspTask):
@@ -203,32 +183,24 @@ class LiftTask(GraspTask):
         self.sim.set_base_pose("target", self.goal, np.array([0.0, 0.0, 0.0, 1.0]))
   
     def get_achieved_goal(self) -> np.ndarray:
-        object_position = np.array(self.sim.get_base_position("object"))
-        return object_position
+        return np.array(self.sim.get_base_position("object"))
 
     def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
-        is_grasped = super().is_object_grasped(achieved_goal)
-        d = distance(achieved_goal, desired_goal)
-        is_lifted = d < self.threshold
-        return np.array(is_grasped and is_lifted, dtype=bool)
+        lifted = distance(achieved_goal, desired_goal) < self.threshold
+        return np.array(self.is_object_grasped() and lifted, dtype=bool)
 
-    def compute_reward(
-        self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any]
-    ) -> np.ndarray:
-        is_grasped = self.is_object_grasped(achieved_goal)
-        d = distance(achieved_goal, desired_goal)
+    def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
+        if self.is_success(achieved_goal, desired_goal):
+            return np.array(1.0, dtype=np.float32)
 
-        if is_grasped and d < self.threshold:
-            return np.array(0.0, dtype=np.float32)  # Success
-
+        # shaping: encourage grasp first, then lifting
+        grasp_err = shaped_dist(self.robot.get_ee_position(), desired_goal, scale=0.3)
+        lift_err = shaped_dist(achieved_goal, desired_goal, scale=self.lift_height)
+        dense = -(grasp_err + lift_err) / 2.0
         if self.reward_type == "sparse":
-            return np.array(-1.0, dtype=np.float32)  # Failure
-        else:
-            if not is_grasped:
-                reward = -distance(achieved_goal, np.array(self.robot.get_ee_position())) -0.5
-            else:
-                reward = -distance(achieved_goal, desired_goal)
-            return reward.astype(np.float32)
+            return np.array(-1.0, dtype=np.float32)
+        return np.array(dense, dtype=np.float32)
+
 
 
 class PickAndPlaceTask(LiftTask):
@@ -240,13 +212,11 @@ class PickAndPlaceTask(LiftTask):
         self.sim.set_base_pose("object", object_position, np.array([0.0, 0.0, 0.0, 1.0]))
         self.sim.set_base_pose("target", self.goal, np.array([0.0, 0.0, 0.0, 1.0]))
 
-
     def is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
         return np.array(distance(achieved_goal, desired_goal) < self.threshold, dtype=bool)
 
     def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: Dict[str, Any] = {}) -> np.ndarray:
-        d = distance(achieved_goal, desired_goal)
+        d = shaped_dist(achieved_goal, desired_goal)
         if self.reward_type == "sparse":
             return -np.array(d > self.threshold, dtype=np.float32)
-        else:
-            return -d.astype(np.float32)
+        return np.array(1.0 - d, dtype=np.float32)
