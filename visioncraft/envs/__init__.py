@@ -1,6 +1,13 @@
-from visioncraft.envs.custom_widowx_env import (
+from visioncraft.envs.custom_env_widowx import (
     WidowXTouchEnv,
     WidowXGraspEnv,
     WidowXLiftEnv,
     WidowXPickPlaceEnv,
+)
+
+from visioncraft.envs.custom_env_locobot import (
+    LocobotTouchEnv,
+    LocobotGraspEnv,
+    LocobotLiftEnv,
+    LocobotPickPlaceEnv,
 )

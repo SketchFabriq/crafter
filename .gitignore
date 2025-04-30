@@ -171,3 +171,7 @@ cython_debug/
 
 devel/*
 build/*
+
+# Latte
+data/*
+models/*

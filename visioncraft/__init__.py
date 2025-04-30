@@ -1,40 +1,53 @@
 from gymnasium.envs.registration import register
+from importlib import import_module
+
+ROBOTS = {
+    "Locobot": "visioncraft.envs.custom_env_locobot",
+    "WidowX": "visioncraft.envs.custom_env_widowx",
+}
+
+TASKS = {
+    "Touch": ("TouchEnv", 50),
+    "Grasp": ("GraspEnv", 50),
+    "Lift": ("LiftEnv", 50),
+    "PickPlace": ("PickPlaceEnv", 100),
+}
+
+REWARD_VARIANTS = {
+    "dense": {"reward_type": "dense"},
+    "sparse": {"reward_type": "sparse"},
+}
+
+def _class_exists(module_path: str, class_name: str) -> bool:
+    """Return True if *class_name* exists inside *module_path*."""
+    try:
+        mod = import_module(module_path)
+        return hasattr(mod, class_name)
+    except ModuleNotFoundError:
+        return False
 
 
-register(
-    id="WidowXTouch-v0",
-    entry_point="visioncraft.envs.custom_widowx_env:WidowXTouchEnv",
-    max_episode_steps=50,
-)
+def _register_all() -> None:
+    """Register every (robot, task, reward) combination with Gymnasium."""
+    for robot, module in ROBOTS.items():
+        for task, (cls_suffix, max_steps) in TASKS.items():
+            env_class = f"{robot}{cls_suffix}"
 
-register(
-    id="WidowXTouchSparse-v0",
-    entry_point="visioncraft.envs.custom_widowx_env:WidowXTouchEnv",
-    max_episode_steps=50,
-    kwargs={"reward_type": "sparse"},
-)
+            if not _class_exists(module, env_class):
+                raise ImportError(
+                    f"{env_class} not found in {module}. Did you spell it correctly?"
+                )
 
-register(
-    id="WidowXGrasp-v0",
-    entry_point="visioncraft.envs.custom_widowx_env:WidowXGraspEnv",
-    max_episode_steps=50,
-)
+            for rew_name, kwargs in REWARD_VARIANTS.items():
+                is_sparse = rew_name == "sparse"
+                id_suffix = "Sparse" if is_sparse else ""
+                gym_id = f"{robot}{task}{id_suffix}-v0"
 
-register(
-    id="WidowXGraspSparse-v0",
-    entry_point="visioncraft.envs.custom_widowx_env:WidowXGraspEnv",
-    max_episode_steps=50,
-    kwargs={"reward_type": "sparse"},
-)
+                register(
+                    id=gym_id,
+                    entry_point=f"{module}:{env_class}",
+                    max_episode_steps=max_steps,
+                    kwargs=(kwargs or None),
+                )
 
-register(
-    id="WidowXLift-v0",
-    entry_point="visioncraft.envs.custom_widowx_env:WidowXLiftEnv",
-    max_episode_steps=50,
-)
-
-register(
-    id="WidowXPickPlace-v0",
-    entry_point="visioncraft.envs.custom_widowx_env:WidowXPickPlaceEnv",
-    max_episode_steps=100,
-)
+_register_all()

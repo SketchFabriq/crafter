@@ -52,7 +52,7 @@ class WidowX(PyBulletRobot):
 
         super().__init__(
             sim,
-            body_name="wx250",
+            body_name="robot_arm",
             file_name=urdf_path,
             base_position=base_position,
             action_space=action_space,

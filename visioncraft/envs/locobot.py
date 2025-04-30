@@ -9,7 +9,7 @@ import os
 
 
 class Locobot(PyBulletRobot):
-    """WidowX robot in PyBullet.
+    """Locobot robot in PyBullet.
 
     Args:
         sim (PyBullet): Simulation instance.
@@ -55,7 +55,7 @@ class Locobot(PyBulletRobot):
         )
 
 
-        # Get the path to the WidowX URDF file
+        # Get the path to the Locobot URDF file
         urdf_path = os.path.join(
             os.path.dirname(__file__), "assets", "locobot", "locobot_full.urdf"
         )
@@ -133,7 +133,7 @@ class Locobot(PyBulletRobot):
     def inverse_kinematics(
         self, link: int, position: np.ndarray, orientation: np.ndarray
     ) -> np.ndarray:
-        """Override the inverse kinematics for WidowX specific implementation.
+        """Override the inverse kinematics for Locobot specific implementation.
 
         Args:
             link (int): The link.
