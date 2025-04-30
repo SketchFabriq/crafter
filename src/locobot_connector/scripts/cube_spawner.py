@@ -57,6 +57,13 @@ class CubeSpawner:
         </model>
       </sdf>
       """
+        
+        self.left_side_scenario = [
+            ((0.30, 0.20, 0.015),  "0 0 1 1"),        # blue
+            ((0.40, 0.30, 0.015),  "0.5 0.5 0.5 1"),  # grey
+            ((0.30, 0.30, 0.015),  "0 0 0 1"),        # black
+            ((0.40, 0.20, 0.015),  "1 1 1 1"),        # white
+        ]
 
     def generate_random_color(self):
         r = random.random()
@@ -71,6 +78,20 @@ class CubeSpawner:
                 self.delete_model(f"cube_{i}")
             except:
                 pass
+        # Special case for short demonstration
+        if pattern == "scenario":
+            for i, (pos, colour) in enumerate(self.left_side_scenario):
+                model_xml = self.cube_template.format(i, colour, colour)
+
+                spawn_pose = Pose()
+                spawn_pose.position.x, spawn_pose.position.y, spawn_pose.position.z = pos
+
+                try:
+                    self.spawn_model(f"cube_{i}", model_xml, "", spawn_pose, "world")
+                    rospy.loginfo(f"[scenario] cube_{i}: {colour} at {pos}")
+                except Exception as e:
+                    rospy.logerr(f"Failed to spawn cube_{i}: {e}")
+            return  # Skip everything else
 
         # Spawn new cubes
         for i in range(num_cubes):
