@@ -1,7 +1,7 @@
 <launch>
     <!-- Arguments -->
     <arg name="num_cubes" default="1" doc="Number of cubes to spawn"/>
-    <arg name="pattern" default="random" doc="Pattern for cube arrangement (random, line, grid, rainbow)"/>
+    <arg name="pattern" default="scenario" doc="Pattern for cube arrangement (random, line, grid, rainbow)"/>
     <arg name="positions" default="[]" doc="List of positions for cubes in format [[x1,y1,z1], [x2,y2,z2], ...]"/>
     
     <!-- Cube Spawner Node -->
