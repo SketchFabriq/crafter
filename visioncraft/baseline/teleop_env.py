@@ -8,7 +8,7 @@ import visioncraft
 
 def main():
 
-    env_name = "LocobotTouch-v0" # WidowXGrasp-v0, WidowXLift-v0, WidowXPickPlace-v0
+    env_name = "LocobotTouch-v0" # LocobotXGrasp-v0, LocobotLift-v0, LocobotPickPlace-v0
 
     # Initialize Pygame
     pygame.init()
