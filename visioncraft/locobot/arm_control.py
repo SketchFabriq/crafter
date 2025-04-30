@@ -12,6 +12,10 @@ from tf.transformations import quaternion_from_euler
 from interbotix_xs_msgs.msg import JointSingleCommand
 
 class LocobotArmControl:
+
+    home = [0, 0, 0, 0, 0, 0]
+    sleep = [0.0015339808305725455, -1.1090681552886963, 1.5646604299545288, -0.0015339808305725455, 0.5016117095947266, -0.0015339808305725455]
+
     def __init__(self,
                  use_simulation: bool = True,
                  joint_action_topic: str = '/locobot/arm_controller/follow_joint_trajectory',
@@ -254,16 +258,18 @@ if __name__ == '__main__':
     arm = LocobotArmControl()
 
     home = [0, 0, 0, 0, 0, 0]
-    arm.move_arm_joints(home)
+    sleep = [0.0015339808305725455, -1.1090681552886963, 1.5646604299545288, -0.0015339808305725455, 0.5016117095947266, -0.0015339808305725455]
+    # sleep = 
+    arm.move_arm_joints(sleep)
 
-    target = Pose()
-    target.position.x = 0.3
-    target.position.y = 0.0
-    target.position.z = 0.4
-    target.orientation.w = 1.0
-    arm.go_to_pose(target)
+    # target = Pose()
+    # target.position.x = 0.3
+    # target.position.y = 0.0
+    # target.position.z = 0.4
+    # target.orientation.w = 1.0
+    # arm.go_to_pose(target)
 
-    arm.move_gripper(0.05)
-    arm.move_gripper(0.0)
+    # arm.move_gripper(0.05)
+    # arm.move_gripper(0.0)
 
     arm.shutdown()
