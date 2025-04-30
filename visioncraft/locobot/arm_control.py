@@ -16,6 +16,8 @@ class LocobotArmControl:
     JOINT_HOME = [0, 0, 0, 0, 0, 0]
     JOINT_SLEEP = [0.0015339808305725455, -1.1090681552886963, 1.5646604299545288, -0.0015339808305725455, 0.5016117095947266, -0.0015339808305725455]
 
+    offset_real = [0, 0.02, 0.0]
+
     def __init__(self,
                  use_simulation: bool = True,
                  joint_action_topic: str = '/locobot/arm_controller/follow_joint_trajectory',
@@ -200,6 +202,9 @@ class LocobotArmControl:
 
     def pick(self, coordinate: list, size: int = 0.03):
         # Create target poses
+        if not self.use_simulation:
+            coordinate += np.array(self.offset_real)
+
         target_pose = Pose()
         target_pose.position.x = coordinate[0]
         target_pose.position.y = coordinate[1]
@@ -227,6 +232,9 @@ class LocobotArmControl:
 
     def place(self, coordinate: list, size: int = 0.03):
         # Create target poses
+        if not self.use_simulation:
+            coordinate += np.array(self.offset_real)
+    
         target_pose = Pose()
         target_pose.position.x = coordinate[0]
         target_pose.position.y = coordinate[1]
