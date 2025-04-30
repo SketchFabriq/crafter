@@ -11,4 +11,4 @@ replicate
 ollama
 openai
 pygame==2.6.1
-stable-baselines3[extra]==1.8.2
+stable-baselines3==2.4.1
