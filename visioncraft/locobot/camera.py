@@ -51,7 +51,9 @@ class LocobotCamera:
 
     def _img_cb(self, msg):
         try:
-            self.image = self.bridge.imgmsg_to_cv2(msg, 'rgb8')
+            image = self.bridge.imgmsg_to_cv2(msg, 'rgb8')
+            if image is not None:
+                self.image = image
         except Exception as e:
             rospy.logerr(f"cv_bridge: {e}")
 
@@ -63,7 +65,8 @@ class LocobotCamera:
 
     def _depth_img_cb(self, msg):
         depth_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
-        self.depth_image = depth_img.astype(np.float32) * 0.001
+        if depth_img is not None:
+            self.depth_image = depth_img.astype(np.float32) * 0.001
 
 
     def get_point_at_pixel(self, x, y):
