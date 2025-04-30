@@ -1,172 +1,90 @@
 <launch>
 
-  <arg name="robot_model" default="locobot_wx250s" />
-  <arg name="robot_name" default="locobot" />
-  <arg name="arm_model" default="$(eval 'mobile_' + arg('robot_model').split('_')[1])" />
-  <arg name="show_lidar" default="true" />
-  <arg name="show_gripper_bar" default="true" />
-  <arg name="show_gripper_fingers" default="true" />
-  <arg name="external_urdf_loc" default="" />
-  <arg name="external_srdf_loc" default="" />
-  <arg name="use_rviz" default="false" />
-  <arg name="rviz_frame" default="$(arg robot_name)/base_footprint" />
-  <arg name="world_name" default="$(find locobot_connector)/worlds/cube_world.world" />
-  <arg name="gui" default="true" />
-  <arg name="debug" default="false" />
-  <arg name="paused" default="false" />
-  <arg name="recording" default="false" />
-  <arg name="use_sim_time" default="true" />
-  <arg name="use_position_controllers" default="false" />
-  <arg name="use_trajectory_controllers" default="true" />
-  <arg name="dof" default="6" />
-  <arg name="use_moveit" default="true" />
-  <arg name="mode_configs"
-    default="$(find interbotix_xslocobot_moveit_interface)/config/modes_all.yaml" />
-  <arg name="use_moveit_rviz" default="false" />
-  <arg name="use_cpp_interface" default="false" />
-  <arg name="moveit_interface_gui" default="true" />
-  <arg name="use_python_interface" default="false" />
+  <arg name="robot_model"                       default="locobot_wx250s"/>
+  <arg name="robot_name"                        default="locobot"/>
+  <arg name="show_lidar"                        default="false"/>
+  <arg name="external_urdf_loc"                 default=""/>
+  <arg name="external_srdf_loc"                 default=""/>
+  <arg name="mode_configs"                      default="$(find interbotix_xslocobot_moveit)/config/modes_all.yaml"/>
+  <arg name="use_gazebo"                        default="false"/>
+  <arg name="use_actual"                        default="true"/>
+  <arg name="use_fake"                          default="false"/>
+  <arg name="dof"                               default="6"/>
+  <arg name="use_camera"                        default="true"/>
+  <arg name="use_rviz"                          default="false"/>
+  <arg name="use_moveit_rviz"                   default="true"/>
+  <arg name="world_name"                        default="$(find interbotix_xslocobot_gazebo)/worlds/xslocobot_gazebo.world"/>
+  <arg name="align_depth"                       default="true"/>
 
-
-  <group if="$(eval robot_model != 'locobot_base')">
-
-    <group if="$(arg use_trajectory_controllers)">
-      <rosparam
-        file="$(find interbotix_xslocobot_gazebo)/config/trajectory_controllers/$(arg arm_model)_trajectory_controllers.yaml"
-        command="load" ns="$(arg robot_name)" />
-      <node
-        name="controller_spawner"
-        pkg="controller_manager"
-        type="controller_manager"
-        respawn="false"
-        output="screen"
-        ns="$(arg robot_name)"
-        args="spawn arm_controller gripper_controller pan_controller tilt_controller joint_state_controller" />
-    </group>
-
-    <group if="$(arg use_position_controllers)">
-      <rosparam
-        file="$(find interbotix_xslocobot_gazebo)/config/position_controllers/$(arg arm_model)_position_controllers.yaml"
-        command="load" ns="$(arg robot_name)" />
-
-      <node if="$(eval dof == 4)"
-        name="controller_spawner"
-        pkg="controller_manager"
-        type="controller_manager"
-        respawn="false"
-        output="screen"
-        ns="$(arg robot_name)"
-        args="spawn joint_state_controller waist_controller shoulder_controller
-                      elbow_controller wrist_angle_controller left_finger_controller
-                      right_finger_controller pan_controller tilt_controller" />
-
-      <node if="$(eval dof == 5)"
-        name="controller_spawner"
-        pkg="controller_manager"
-        type="controller_manager"
-        respawn="false"
-        output="screen"
-        ns="$(arg robot_name)"
-        args="spawn joint_state_controller waist_controller shoulder_controller
-                      elbow_controller wrist_angle_controller wrist_rotate_controller
-                      left_finger_controller right_finger_controller pan_controller
-                      tilt_controller" />
-
-      <node if="$(eval dof == 6)"
-        name="controller_spawner"
-        pkg="controller_manager"
-        type="controller_manager"
-        respawn="false"
-        output="screen"
-        ns="$(arg robot_name)"
-        args="spawn joint_state_controller waist_controller shoulder_controller
-                      elbow_controller forearm_roll_controller wrist_angle_controller
-                      wrist_rotate_controller left_finger_controller right_finger_controller
-                      pan_controller tilt_controller" />
-    </group>
-
-  </group>
-
-  <node unless="$(eval robot_model != 'locobot_base')"
-    name="controller_spawner"
-    pkg="controller_manager"
-    type="controller_manager"
-    respawn="false"
-    output="screen"
-    ns="$(arg robot_name)"
-    args="spawn pan_controller tilt_controller joint_state_controller" />
-
-  <include file="$(find interbotix_xslocobot_descriptions)/launch/xslocobot_description.launch">
-    <arg name="robot_model" value="$(arg robot_model)" />
-    <arg name="robot_name" value="$(arg robot_name)" />
-    <arg name="show_lidar" value="$(arg show_lidar)" />
-    <arg name="model" value="/home/vscode/ros_ws/visioncraft/envs/assets/locobot/locobot_full.urdf" />
-    <arg name="show_gripper_bar" value="$(arg show_gripper_bar)" />
-    <arg name="show_gripper_fingers" value="$(arg show_gripper_fingers)" />
-    <arg name="external_urdf_loc" value="$(arg external_urdf_loc)" />
-    <arg name="use_rviz" value="$(arg use_rviz)" />
-    <arg name="rviz_frame" value="$(arg rviz_frame)" />
+  <include if="$(arg use_gazebo)" file="$(find interbotix_xslocobot_gazebo)/launch/xslocobot_gazebo.launch">
+    <arg name="robot_model"                       value="$(arg robot_model)"/>
+    <arg name="robot_name"                        value="$(arg robot_name)"/>
+    <arg name="paused"                            default="false"/>
+    <arg name="show_lidar"                        value="$(arg show_lidar)"/>
+    <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
+    <arg name="world_name"                        value="$(arg world_name)"/>
+    <arg name="use_trajectory_controllers"        value="true"/>
+    <arg name="dof"                               value="$(arg dof)"/>
   </include>
 
-  <node
-    name="urdf_spawner"
-    pkg="gazebo_ros"
-    type="spawn_model"
-    respawn="false"
-    output="screen"
-    ns="$(arg robot_name)"
-    args="-urdf -model $(arg robot_name) -param robot_description" />
 
-  <group if="$(arg use_moveit)">
-
-    <include file="$(find interbotix_xslocobot_moveit)/launch/xslocobot_moveit.launch">
-      <arg name="robot_model" value="$(arg robot_model)" />
-      <arg name="robot_name" value="$(arg robot_name)" />
-      <arg name="show_lidar" value="$(arg show_lidar)" />
-      <arg name="external_urdf_loc" value="$(arg external_urdf_loc)" />
-      <arg name="external_srdf_loc" value="$(arg external_srdf_loc)" />
-      <arg name="mode_configs" value="$(arg mode_configs)" />
-      <arg name="use_gazebo" value="false" />
-      <arg name="use_actual" value="false" />
-      <arg name="use_fake" value="false" />
-      <arg name="dof" value="$(arg dof)" />
-      <arg name="use_camera" value="true" />
-      <arg name="use_moveit_rviz" value="$(arg use_moveit_rviz)" />
-      <arg name="world_name" value="$(arg world_name)" />
+  <group if="$(arg use_actual)">    
+    <rosparam file="$(find interbotix_xslocobot_ros_control)/config/$(arg dof)dof_controllers.yaml" command="load" ns="$(arg robot_name)"/>
+    <rosparam file="$(find interbotix_xslocobot_ros_control)/config/hardware.yaml" command="load" ns="$(arg robot_name)"/>
+    <include file="$(find interbotix_xslocobot_control)/launch/xslocobot_control.launch">
+      <arg name="robot_model"                       value="$(arg robot_model)"/>
+      <arg name="robot_name"                        value="$(arg robot_name)"/>
+      <arg name="show_lidar"                        value="$(arg show_lidar)"/>
+      <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
+      <arg name="use_rviz"                          value="$(arg use_rviz)"/>
+      <arg name="use_camera"                        value="$(arg use_camera)"/>
+      <arg name="mode_configs"                      value="$(arg mode_configs)"/>
+      <arg name="align_depth"                       value="$(arg align_depth)"/>
     </include>
 
-    <group if="$(arg use_cpp_interface)">
-
-      <node
-        name="moveit_interface"
-        pkg="interbotix_moveit_interface"
-        type="moveit_interface"
-        respawn="false"
-        output="screen"
-        ns="$(arg robot_name)" />
-
-      <node if="$(arg moveit_interface_gui)"
-        name="moveit_interface_gui"
-        pkg="interbotix_moveit_interface"
-        type="moveit_interface_gui"
-        output="screen"
-        ns="$(arg robot_name)" />
-
-    </group>
-
-    <node if="$(arg use_python_interface)"
-      name="moveit_python_interface"
-      pkg="interbotix_moveit_interface"
-      type="moveit_python_interface"
+    <node
+      name="controller_spawner"
+      pkg="controller_manager"
+      type="controller_manager"
       respawn="false"
       output="screen"
+      ns="$(arg robot_name)"
+      args="spawn arm_controller gripper_controller"/>
+
+    <node
+      name="xs_hardware_interface"
+      pkg="interbotix_xs_ros_control"
+      type="xs_hardware_interface"
+      output="screen"
       ns="$(arg robot_name)">
-      <rosparam command="load"
-        file="$(find interbotix_xslocobot_moveit_interface)/config/$(arg robot_model).yaml" />
-      <param name="robot_model" value="$(arg robot_model)" />
-      <remap from="/attached_collision_object" to="/$(arg robot_name)/attached_collision_object" />
-      <remap from="/collision_object" to="/$(arg robot_name)/collision_object" />
     </node>
   </group>
+
+  <include if="$(arg use_fake)" file="$(find interbotix_xslocobot_descriptions)/launch/xslocobot_description.launch">
+    <arg name="robot_model"                       value="$(arg robot_model)"/>
+    <arg name="robot_name"                        value="$(arg robot_name)"/>
+    <arg name="show_lidar"                        value="$(arg show_lidar)"/>
+    <arg name="external_urdf_loc"                 value="$(arg external_urdf_loc)"/>
+    <arg name="use_rviz"                          value="false"/>
+    <arg name="use_joint_pub"                     value="true"/>
+    <arg name="rate"                              value="100"/>
+    <arg name="source_list"                       value="[move_group/fake_controller_joint_states]"/>
+  </include>
+
+  <include file="$(find interbotix_xslocobot_moveit)/launch/move_group.launch" ns="$(arg robot_name)">
+    <arg name="robot_model"                       value="$(arg robot_model)"/>
+    <arg name="robot_name"                        value="$(arg robot_name)"/>
+    <arg name="show_lidar"                        value="$(arg show_lidar)"/>
+    <arg name="external_srdf_loc"                 value="$(arg external_srdf_loc)"/>
+    <arg name="dof"                               value="$(arg dof)"/>
+    <arg name="use_camera"                        value="$(arg use_camera)"/>
+    <arg name="fake_execution"                    value="$(arg use_fake)"/>
+    <arg name="publish_monitored_planning_scene"  value="true" />
+  </include>
+
+  <include if="$(arg use_moveit_rviz)" file="$(find interbotix_xslocobot_moveit)/launch/moveit_rviz.launch" ns="$(arg robot_name)">
+    <arg name="robot_name"                        value="$(arg robot_name)"/>
+    <arg name="config"                            value="true"/>
+  </include>
 
 </launch>

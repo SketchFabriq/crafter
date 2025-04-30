@@ -30,3 +30,14 @@ roslaunch locobot_connector cube_spawner.launch num_cubes:=5 pattern:=grid
 export ROS_MASTER_URI=http://172.19.0.128:11311
 
 docker-compose up -d --build
+
+
+On robot : 
+roslaunch interbotix_xslocobot_control xslocobot_control.launch robot_model:=locobot_wx250s use_base:=true
+
+On host : 
+roslaunch interbotix_xslocobot_moveit xslocobot_moveit.launch robot_model:=locobot_wx250s dof:=6 use_actual:=true
+
+
+lst : 
+roslaunch interbotix_xslocobot_moveit xslocobot_moveit.launch robot_model:=locobot_wx250s dof:=6 use_actual:=true use_camera:=true

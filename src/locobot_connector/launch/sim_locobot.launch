@@ -1,0 +1,6 @@
+<launch>
+   <include file="$(find locobot_connector)/launch/real_locobot.launch">
+    <arg name="use_actual" value="false" />
+    <arg name="use_gazebo" value="true" />    
+    </include>
+</launch>
